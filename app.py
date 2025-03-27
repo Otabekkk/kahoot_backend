@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import secrets
@@ -40,7 +40,23 @@ def get_admin_tests(user_id):
     return jsonify({"user_id": admin.id, "tests": tests})
 
 
-# @app.route('add/<str:username>')
+@app.route('/api/admins', methods = ['POST'])
+def create_admin():
+    data = request.get_json()
+    try:
+        admin = Admin(
+            username = data['username'],
+            password = data['password']
+        )
+
+        db.session.add(admin)
+        db.session.commit()
+
+        return jsonify({'id': admin.id, 'username': admin.username}), 201
+    
+    except Exception as ex:
+        db.session.rollback()
+        return jsonify({'Error': str(ex)})
 
 
 if __name__ == '__main__':
