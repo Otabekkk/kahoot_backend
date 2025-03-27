@@ -2,9 +2,11 @@ from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import secrets
+from flasgger import Swagger
 # from flask_migrate import Migrate
 
 app = Flask(__name__)
+Swagger(app)
 CORS(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = ''
@@ -22,6 +24,30 @@ with app.app_context():
 
 @app.route('/admins/<int:user_id>', methods = ['GET'])
 def get_admin(user_id: int):
+    """
+    Получить информацию об администраторе
+    ---
+    parameters:
+      - name: user_id
+        in: path
+        type: integer
+        required: true
+        description: ID администратора
+    responses:
+      200:
+        description: Успешный ответ
+        schema:
+          id: Admin
+          properties:
+            id:
+              type: integer
+              description: ID администратора
+            username:
+              type: string
+              description: Имя пользователя
+      404:
+        description: Администратор не найден
+    """
     admin = Admin.query.get(user_id)
     if not admin:
         return jsonify({'Error': 'User not found'}), 404
@@ -42,6 +68,43 @@ def get_admin_tests(user_id):
 
 @app.route('/api/admins', methods = ['POST'])
 def create_admin():
+    """
+    Создание администратора
+    ---
+    tags:
+      - Администраторы
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            username:
+              type: string
+              description: Имя пользователя
+              example: "admin123"
+            password:
+              type: string
+              description: Пароль
+              example: "secret"
+    responses:
+      201:
+        description: Администратор создан
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: ID администратора
+            username:
+              type: string
+              description: Имя пользователя
+      400:
+        description: Ошибка валидации
+      500:
+        description: Внутренняя ошибка сервера
+    """
     data = request.get_json()
     try:
         admin = Admin(
