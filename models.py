@@ -5,7 +5,7 @@ db = SQLAlchemy()
 class Admin(db.Model):
     __tablename__ = 'admins'
     id = db.Column(db.Integer, primary_key = True)
-    username = db.Column(db.String(50), nullable = False)
+    username = db.Column(db.String(50), nullable = False, unique = True)
     password = db.Column(db.String(255), nullable = False)
     tests = db.relationship('Test', backref = 'admin', lazy = True)
 
