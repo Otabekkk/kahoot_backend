@@ -3,6 +3,7 @@ from flask_cors import CORS
 import secrets
 from flasgger import Swagger
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_socketio import SocketIO, emit, join_room, leave_room
 # from flask_migrate import Migrate
 
 
@@ -10,6 +11,7 @@ app = Flask(__name__)
 Swagger(app)
 CORS(app)
 jwt = JWTManager(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = ''
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -375,5 +377,26 @@ def submit_answer():
     return jsonify({"correct": answer.is_correct, "score": player.score}), 200
 
 
+@socketio.on('connect')
+def handle_connect():
+    print(f"Клиент подключился: {request.sid}")
+    emit('connection_response', {'data': 'Успешное подключение'})
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print(f"Клиент отключился: {request.sid}")
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print("Клиент отключился")
+
+
+
 if __name__ == '__main__':
-    app.run(host = '0.0.0.0', port = 5000, debug = True)
+       socketio.run(app, 
+                host='0.0.0.0', 
+                port=5000, 
+                debug=True, 
+                allow_unsafe_werkzeug=True)
