@@ -13,7 +13,7 @@ CORS(app)
 jwt = JWTManager(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-app.config['SQLALCHEMY_DATABASE_URI'] = ''
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ztw02@localhost:5432/kahoot'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_SECURE'] = False
 
@@ -386,11 +386,6 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     print(f"Клиент отключился: {request.sid}")
-
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    print("Клиент отключился")
 
 
 
