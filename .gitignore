@@ -1,0 +1,4 @@
+backend/__pycache__
+logs.txt
+venv
+backend/config.py
