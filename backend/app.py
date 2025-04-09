@@ -10,6 +10,30 @@ from flasgger import Swagger
 app = Flask(__name__)
 app.config.from_object('config')
 
+# Swagger configuration
+app.config['SWAGGER'] = {
+    'title': 'Quiz Game API',
+    'uiversion': 3,
+    'description': 'API for creating and managing quiz games with real-time multiplayer functionality',
+    'version': '1.0.0',
+    'termsOfService': '',
+    'tags': [
+        {
+            'name': 'Quizzes',
+            'description': 'Operations with quizzes'
+        },
+        {
+            'name': 'Questions',
+            'description': 'Operations with questions'
+        },
+        {
+            'name': 'Game',
+            'description': 'Real-time game operations'
+        }
+    ]
+}
+swagger = Swagger(app)
+
 db.init_app(app)
 
 
