@@ -4,6 +4,7 @@ from flask_socketio import SocketIO, join_room, emit, leave_room
 from models import db, Quiz, Question
 from flask_migrate import Migrate
 import datetime
+from flasgger import Swagger
 
 
 app = Flask(__name__)
