@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO, join_room, emit, leave_room
 from models import db, Quiz, Question
+from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 import datetime
 from flasgger import Swagger
@@ -10,6 +11,8 @@ from auth import auth_bp
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.resolve()
+
+jwt = JWTManager()
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -48,6 +51,9 @@ with app.app_context():
 Migrate(app, db)
 
 CORS(app)
+
+jwt.init_app(app)
+
 socketio = SocketIO(app, cors_allowed_origins = '*', async_mode="eventlet")
 
 active_games = {}
