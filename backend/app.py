@@ -42,16 +42,6 @@ swagger = Swagger(app)
 
 db.init_app(app)
 
-
-def write_log(message):
-    with open('logs.txt', 'a', encoding='utf-8') as f:
-        f.write(f"{datetime.datetime.now()} - {message}\n")
-
-def get_questions(quiz_id: str):
-    questions = Quiz.query.filter_by(quiz_id = quiz_id).first().questions
-    return questions
-
-
 with app.app_context():
     db.create_all()
 
@@ -62,6 +52,16 @@ socketio = SocketIO(app, cors_allowed_origins = '*', async_mode="eventlet")
 
 active_games = {}
 game_states = {}
+
+def write_log(message):
+    with open('logs.txt', 'a', encoding='utf-8') as f:
+        f.write(f"{datetime.datetime.now()} - {message}\n")
+
+
+def get_questions(quiz_id: str):
+    questions = Quiz.query.filter_by(quiz_id = quiz_id).first().questions
+    return questions
+
 
 @app.route('/quizzes', methods=['POST'])
 def create_quiz():
