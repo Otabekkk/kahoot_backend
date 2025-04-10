@@ -1,16 +1,20 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO, join_room, emit, leave_room
 from models import db, Quiz, Question
 from flask_migrate import Migrate
 import datetime
 from flasgger import Swagger
+from auth import auth_bp
 
+from pathlib import Path
+
+BASE_DIR = Path(__file__).parent.resolve()
 
 app = Flask(__name__)
 app.config.from_object('config')
+app.register_blueprint(auth_bp, url_prefix = '/auth')
 
-# Swagger configuration
 app.config['SWAGGER'] = {
     'title': 'Quiz Game API',
     'uiversion': 3,
@@ -32,6 +36,8 @@ app.config['SWAGGER'] = {
         }
     ]
 }
+
+
 swagger = Swagger(app)
 
 db.init_app(app)
@@ -213,50 +219,25 @@ def get_quizzes():
     quizzes = Quiz.query.all()
     return jsonify([{'id': q.id, 'title': q.title, 'questions': [question.text for question in q.questions]} for q in quizzes]), 200
 
-# SocketIO events documentation (not part of Swagger but included for completeness)
-"""
-SocketIO Events Documentation:
 
-1. join_game
-- Event: 'join_game'
-- Description: Join a game room
-- Data:
-  - username: string - Player's username
-  - quiz_id: string - ID of the quiz/game to join
-- Emits:
-  - 'players_list_update' to room - Updated list of players
-
-2. disconnect
-- Event: 'disconnect'
-- Description: Handle player disconnection
-- Automatically emitted on socket disconnect
-- Emits:
-  - 'players_list_update' to room - Updated list of players
-
-3. start_game
-- Event: 'start_game'
-- Description: Start the game
-- Data:
-  - quiz_id: string - ID of the quiz/game to start
-- Emits:
-  - 'new_question' to room - First question of the quiz
-  - 'error' if game cannot be started
-
-4. receive_answer
-- Event: 'receive_answer'
-- Description: Handle player's answer
-- Data:
-  - quiz_id: string - ID of the quiz/game
-  - username: string - Player's username
-  - answer: string - Player's answer
-- Emits:
-  - 'next_question' to room - Next question if available
-  - 'game_over' to room - Final results when game ends
-  - 'error' if any issues occur
-"""
 #----------------------------------------------------------------------------
+
 @socketio.on('join_game')
 def join(data):
+    """
+    Join a game room
+    ---
+    operationId: join_game
+    message:
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          username:
+            type: string
+          quiz_id:
+            type: string
+    """
     username = data['username']
     quiz_id = data['quiz_id']
     
@@ -331,155 +312,6 @@ def start_game(data):
         emit('error', {'message': f'Start game error: {str(e)}'}, room=quiz_id)
         write_log(f'Ошибка запуска игры {quiz_id}: {str(e)}\n')
 
-# @socketio.on('start_game')
-# def start_game(data):
-#     quiz_id = data['quiz_id']
-    
-
-#     # if quiz_id in active_games:
-#     questions = get_questions(quiz_id)
-#     players = {username: {'score': 0, 'answers': []} for username in active_games[quiz_id].keys()}
-
-#     game_state = {
-#         'questions': questions,
-#         'current_question': 0,
-#         'players': players,
-#         'is_active': True
-#     }
-
-#     game_states[quiz_id] = game_state
-
-#     emit('new_question', {'question': game_state['questions'][game_state['current_question']]}, room = quiz_id)
-#     write_log(f'Игра {quiz_id} началась!\n')
-
-# @socketio.on('receive_answer')
-# def handle_receive_answer(data):
-#     try:
-#         quiz_id = data['quiz_id']
-#         username = data['username']
-#         player_answer = data['answer'].strip().lower()
-
-#         if quiz_id not in game_states:
-#             emit('error', {'message': 'Game not found'}, room=quiz_id)
-#             return
-
-#         game_state = game_states[quiz_id]
-        
-#         if not game_state['is_active']:
-#             emit('error', {'message': 'Game is not active'}, room=quiz_id)
-#             return
-
-#         current_question = game_state['questions'][game_state['current_question']]
-
-#         correct_option = current_question.correct_option
-#         correct_answer = getattr(current_question, f'option_{correct_option[:-1]}').lower()
-        
-#         if player_answer == correct_answer:
-#             game_state['players'][username]['score'] += 1
-
-
-#         game_state['players'][username]['answers'].append({
-#             'question': current_question.text,
-#             'answer': player_answer,
-#             'is_correct': player_answer == correct_answer
-#         })
-
-#         game_state['current_question'] += 1
-
-#         if game_state['current_question'] < len(game_state['questions']):
-#             next_question = game_state['questions'][game_state['current_question']]
-#             emit('next_question', {
-#                 'question': {
-#                     'text': next_question.text,
-#                     'options': [
-#                         next_question.option_1,
-#                         next_question.option_2,
-#                         next_question.option_3,
-#                         next_question.option_4
-#                     ],
-#                     'correct_option': next_question.correct_option
-#                 }
-#             }, room = quiz_id)
-#         else:
-#             game_state['is_active'] = False
-#             emit('game_over', {
-#                 'message': 'Игра окончена!',
-#                 'results': game_state['players']
-#             }, room=quiz_id)
-#             write_log(f'Игра {quiz_id} завершена. Результаты: {game_state["players"]}')
-
-#     except Exception as e:
-#         emit('error', {'message': f'Error processing answer: {str(e)}'}, room=quiz_id)
-#         write_log(f'Ошибка в receive_answer: {str(e)}')
-
-# @socketio.on('receive_answer')
-# def handle_receive_answer(data):
-#     try:
-#         quiz_id = data['quiz_id']
-#         username = data['username']
-#         player_answer = data['answer'].strip().lower()
-
-#         if quiz_id not in game_states:
-#             emit('error', {'message': 'Game not found'}, room=quiz_id)
-#             return
-
-#         game_state = game_states[quiz_id]
-        
-#         if not game_state['is_active']:
-#             emit('error', {'message': 'Game is not active'}, room=quiz_id)
-#             return
-
-#         current_question_index = game_state['current_question']
-#         current_question = game_state['questions'][current_question_index]
-
-#         correct_option = current_question.correct_option
-#         correct_answer = getattr(current_question, f'option_{correct_option[0]}').lower()
-#         is_correct = player_answer == correct_answer
-        
-#         if is_correct:
-#             game_state['players'][username]['score'] += 1
-
-#         game_state['players'][username]['answers'].append({
-#             'question': current_question.text,
-#             'answer': player_answer,
-#             'is_correct': is_correct
-#         })
-
-        
-#         all_answered = all(len(player['answers']) > current_question_index 
-#                           for player in game_state['players'].values())
-        
-#         if all_answered:
-            
-#             game_state['current_question'] += 1
-
-#             if game_state['current_question'] < len(game_state['questions']):
-#                 next_question = game_state['questions'][game_state['current_question']]
-#                 emit('next_question', {
-#                     'question': {
-#                         'text': next_question.text,
-#                         'options': [
-#                             next_question.option_1,
-#                             next_question.option_2,
-#                             next_question.option_3,
-#                             next_question.option_4
-#                         ],
-#                         'correct_option': next_question.correct_option
-#                     },
-#                     'question_number': game_state['current_question'] + 1,
-#                     'total_questions': len(game_state['questions'])
-#                 }, room=quiz_id)
-#             else:
-#                 game_state['is_active'] = False
-#                 emit('game_over', {
-#                     'message': 'Игра окончена!',
-#                     'results': game_state['players']
-#                 }, room=quiz_id)
-#                 write_log(f'Игра {quiz_id} завершена. Результаты: {game_state["players"]}')
-
-#     except Exception as e:
-#         emit('error', {'message': f'Error processing answer: {str(e)}'}, room = quiz_id)
-#         write_log(f'Ошибка в receive_answer: {str(e)}')
 
 @socketio.on('receive_answer')
 def handle_receive_answer(data):
@@ -590,68 +422,6 @@ def handle_receive_answer(data):
     except Exception as e:
         emit('error', {'message': f'Error processing answer: {str(e)}'}, room=quiz_id)
         write_log(f'Ошибка в receive_answer: {str(e)}\nДанные: {data}')
-
-# @socketio.on('recieve_answer')
-# def receive_answer(data):
-#     quiz_id = data['quiz_id']
-#     username = data['username']
-#     player_answer = data['answer']
-#     questions = get_questions(quiz_id)
-
-#     game_state = game_states[quiz_id]
-
-#     if game_state and game_state['is_active']:
-#         correct_answer = game_state['questions'][game_state['current_question']].text.lower()
-
-#         if player_answer.lower() == correct_answer:
-#             game_state['players'][username]['score'] += 1
-        
-
-#         game_state['players'][username]['answers'].append(player_answer)
-
-#         game_state['current_question'] += 1
-
-#         if game_state['current_question'] < len(game_state['questions']):
-#             next_question = questions[game_state['current_question']]
-
-#             next_question_data = {
-#                 'text': next_question.text,
-#                 'options': [
-#                     next_question.option_1,
-#                     next_question.option_2,
-#                     next_question.option_3,
-#                     next_question.option_4
-#                 ],
-#                 'correct_option': next_question.correct_option
-#         }
-            
-#             emit('next_question', {'question': next_question_data}, room = quiz_id)
-        
-#         else:
-#             game_state['is_active'] = False
-#             emit('game_over', {'message': 'Игра окончена!'}, room = quiz_id)
-#             write_log(f'Игра: {quiz_id} завершена!\n')
-
-
-# @socketio.on('game_over')
-# def game_over(data):
-#     quiz_id = data['quiz_id']
-
-#     game_state = game_states.get(quiz_id)
-
-#     if game_state:
-#         emit('final_results', {'scores': game_state['players']}, room = quiz_id)
-#         write_log(f"Игра {quiz_id} завершена! Результаты отправлены.")
-        
-
-# @socketio.on('clear_game')
-# def clear_game(data):
-#     quiz_id = data['quiz_id']
-
-#     if quiz_id in game_states:
-#         del game_states[quiz_id]
-
-#         write_log(f"Состояние игры {quiz_id} удалено.")
 
 
 if __name__ == '__main__':
