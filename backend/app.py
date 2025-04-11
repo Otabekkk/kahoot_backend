@@ -82,6 +82,9 @@ def missinTokenCallBack(error):
         'Error': 'authorization_header'
     }), 401
 
+# @jwt.additional_claims_loader
+# def makeAdditionalClaims(identity):
+ 
 
 def write_log(message):
     with open('logs.txt', 'a', encoding='utf-8') as f:
