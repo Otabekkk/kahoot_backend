@@ -61,6 +61,28 @@ socketio = SocketIO(app, cors_allowed_origins = '*', async_mode="eventlet")
 active_games = {}
 game_states = {}
 
+@jwt.expired_token_loader
+def expiredTokenCallBack(jwt_header, jwt_data):
+    return jsonify({
+        'Message':'Token has expired',
+        'Error': 'token_expired'
+    }), 401
+
+@jwt.invalid_token_loader
+def invalidTokenCallBack(error):
+    return jsonify({
+        'Message': 'Signature verification failed',
+        'Error': 'invalid_token'
+    }), 401
+
+@jwt.unauthorized_loader
+def missinTokenCallBack(error):
+    return jsonify({
+        'Message': 'Request does not contain valid token',
+        'Error': 'authorization_header'
+    }), 401
+
+
 def write_log(message):
     with open('logs.txt', 'a', encoding='utf-8') as f:
         f.write(f"{datetime.datetime.now()} - {message}\n")
